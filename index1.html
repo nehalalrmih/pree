@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CiviX System - العرض التقديمي الرسمي</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            /* Professional Color Palette */
+            --bg-body: #f1f5f9;
+            --primary: #0f172a;       /* Deep Slate */
+            --primary-light: #334155; 
+            --accent: #3b82f6;        /* Modern Blue */
+            --luxury-gold: #c5a059;   /* Gold */
+            --luxury-gold-light: #e6c888;
+            --luxury-gradient: linear-gradient(135deg, #c5a059 0%, #e6c888 100%);
+            --surface: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            --radius: 20px;
+            --transition-smooth: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; cursor: default; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* --- 3D Background --- */
+        #canvas-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            background: linear-gradient(to bottom, #f8fafc, #e2e8f0);
+        }
+
+        /* --- App Layout --- */
+        #app-container {
+            position: relative; width: 100%; height: 100%;
+            display: flex; flex-direction: column; z-index: 10;
+        }
+
+        /* --- Header --- */
+        header {
+            height: 80px; padding: 0 3rem;
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.5);
+            flex-shrink: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .brand { display: flex; align-items: center; gap: 1.2rem; }
+        .logo-img { height: 45px; width: auto; }
+        .brand-text h2 { 
+            font-size: 1.1rem; font-weight: 800; color: var(--primary); line-height: 1.1; 
+            letter-spacing: -0.5px;
+        }
+        .brand-text span { font-size: 0.75rem; color: var(--luxury-gold); font-weight: 700; display: block; text-transform: uppercase; letter-spacing: 1.5px; }
+
+        /* --- Presentation Area --- */
+        main {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 150px);
+            perspective: 1500px;
+            overflow: hidden;
+        }
+
+        /* Professional Slide Transitions */
+        .slide {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 4rem;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95) translateY(20px);
+            transition: var(--transition-smooth);
+            visibility: hidden; /* Improves accessibility */
+        }
+
+        .slide.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1) translateY(0);
+            visibility: visible;
+            z-index: 5;
+        }
+        
+        .slide.prev {
+            transform: scale(1.05) translateY(-20px);
+            opacity: 0;
+        }
+
+        /* Content Animation Sequence */
+        .reveal-item {
+            opacity: 0; 
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        
+        /* Staggered Animation Delays */
+        .slide.active .reveal-item:nth-child(1) { transition-delay: 0.1s; }
+        .slide.active .reveal-item:nth-child(2) { transition-delay: 0.2s; }
+        .slide.active .reveal-item:nth-child(3) { transition-delay: 0.3s; }
+        .slide.active .reveal-item:nth-child(4) { transition-delay: 0.4s; }
+        .slide.active .reveal-item:nth-child(5) { transition-delay: 0.5s; }
+        .slide.active .reveal-item:nth-child(n+6) { transition-delay: 0.6s; }
+
+        .slide.active .reveal-item {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .slide-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            height: 100%;
+            overflow-y: auto;
+            padding-left: 5px; /* Space for scrollbar */
+        }
+        /* Custom Scrollbar */
+        .slide-content::-webkit-scrollbar { width: 6px; }
+        .slide-content::-webkit-scrollbar-track { background: transparent; }
+        .slide-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .slide-content::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* --- Typography --- */
+        h1 { 
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2.8rem; font-weight: 800; color: var(--primary); line-height: 1.1;
+            padding-right: 1.5rem; border-right: 6px solid var(--luxury-gold); 
+            flex-shrink: 0;
+        }
+
+        /* --- Feature Boxes --- */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 1.5rem;
+        }
+        
+        .feature-box {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: flex-start;
+            gap: 1.2rem;
+            border: 1px solid rgba(0,0,0,0.04);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .feature-box:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--luxury-gold-light);
+        }
+        .feature-box i { 
+            width: 50px; height: 50px; 
+            background: linear-gradient(135deg, #fffbeb 0%, #fff 100%); 
+            color: var(--luxury-gold); 
+            border-radius: 14px; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(197, 160, 89, 0.15);
+        }
+        .feature-box-content { display: flex; flex-direction: column; }
+        .feature-box strong { color: var(--text-main); font-size: 1.1rem; line-height: 1.4; display: block; font-weight: 700;}
+        .feature-box span { color: var(--text-sub); font-size: 0.95rem; margin-top: 6px; line-height: 1.5; display: block;}
+
+        /* --- Engineer Header --- */
+        .engineer-header {
+            background: var(--primary);
+            color: white;
+            padding: 1.2rem 2rem;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-lg);
+            flex-shrink: 0;
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .engineer-header::after {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+        @keyframes shine { 0% { transform: translateX(-100%) rotate(45deg); } 100% { transform: translateX(100%) rotate(45deg); } }
+
+        .eng-info h2 { font-size: 1.5rem; margin: 0; color: white; font-weight: 700; font-family: 'Montserrat', sans-serif; }
+        .eng-info p { font-size: 0.95rem; opacity: 0.9; margin: 0; color: var(--luxury-gold-light); letter-spacing: 1px; }
+
+        /* --- Vision & Team Slide Styles --- */
+        .vision-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            padding: 2.5rem;
+            border-radius: var(--radius);
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.3);
+        }
+        .vision-card i { font-size: 3rem; color: var(--luxury-gold); margin-bottom: 1rem; display: block; }
+        .vision-card h3 { font-size: 1.8rem; margin-bottom: 1rem; font-family: 'Montserrat', sans-serif; }
+        .vision-card p { font-size: 1.2rem; line-height: 1.8; opacity: 0.9; max-width: 900px; margin: 0 auto; }
+
+        .profile-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; width: 100%;
+        }
+        .profile-card {
+            background: white; border-radius: 16px; padding: 2rem;
+            text-align: center; box-shadow: var(--shadow-sm);
+            border-top: 4px solid var(--luxury-gold);
+            transition: all 0.3s ease;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .profile-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
+        .profile-icon {
+            width: 70px; height: 70px; background: #fffbeb; color: var(--luxury-gold);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; margin-bottom: 1rem;
+            box-shadow: 0 4px 10px rgba(197, 160, 89, 0.2);
+        }
+        .profile-card h4 { font-size: 1.1rem; color: var(--primary); margin: 0 0 0.3rem 0; font-weight: 800; font-family: 'Montserrat', sans-serif; }
+        .profile-card p { font-size: 0.85rem; color: var(--text-sub); margin: 0; line-height: 1.5; }
+
+        /* --- Tech Cards --- */
+        .tech-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        .tech-card {
+            background: var(--surface); border-radius: var(--radius); padding: 1.2rem;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.04);
+        }
+        .tech-card i { font-size: 2rem; margin-bottom: 0.5rem; }
+        
+        /* Colors for tech */
+        .c-python { color: #3776ab; } .c-js { color: #f7df1e; } .c-docker { color: #2496ed; } 
+        .c-git { color: #f05032; } .c-jira { color: #0052CC; } .c-ubuntu { color: #e95420; } 
+        .c-figma { color: #a259ff; } .c-fastapi { color:#009688; }
+
+        /* --- Final Thank You --- */
+        .thank-you-slide {
+            height: 100%; width: 100%; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
+        }
+        .ty-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            padding: 4rem 5rem; border-radius: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            max-width: 800px;
+        }
+        .ty-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 4rem; font-weight: 800; 
+            background: var(--luxury-gradient); -webkit-background-clip: text; color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .ty-sub { font-size: 1.5rem; color: var(--text-sub); margin-bottom: 2rem; }
+        .ty-quote { font-size: 1.1rem; color: var(--primary); font-style: italic; border-top: 2px solid #e2e8f0; padding-top: 1.5rem; }
+
+        /* --- Footer Controls --- */
+        footer { 
+            height: 70px; display: flex; justify-content: space-between; align-items: center; 
+            padding: 0 3rem; background: var(--surface); border-top: 1px solid rgba(0,0,0,0.05); 
+            position: relative; flex-shrink: 0; z-index: 50; 
+        }
+        .nav-btn { 
+            width: 50px; height: 50px; border-radius: 12px; border: 1px solid #e2e8f0; 
+            background: white; color: var(--primary); font-size: 1.1rem; cursor: pointer; 
+            display: flex; justify-content: center; align-items: center; transition: all 0.2s; 
+            box-shadow: var(--shadow-sm); 
+        }
+        .nav-btn:hover:not(:disabled) { background: var(--primary); color: white; border-color: var(--primary); transform: scale(1.1); }
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .progress-bar-container {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #f1f5f9;
+        }
+        .progress-bar-fill {
+            height: 100%; background: var(--luxury-gradient); width: 0%; transition: width 0.5s ease;
+        }
+
+        /* --- Mobile Responsive --- */
+        @media (max-width: 1024px) {
+            .slide { padding: 1.5rem; }
+            .features-grid, .tech-grid, .profile-grid { grid-template-columns: 1fr 1fr; }
+            h1 { font-size: 1.8rem; }
+            .ty-title { font-size: 2.5rem; }
+            .ty-card { padding: 2rem; width: 95%; }
+            .vision-card { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Background Container -->
+    <div id="canvas-container"></div>
+
+    <div id="app-container">
+        <!-- Header -->
+        <header>
+            <div class="brand">
+                <img src="https://z-cdn-media.chatglm.cn/files/b5eb10a2-3e85-45ed-ba36-cfef1e09af91.png?auth_key=1888518454-bd954146427e458f8f06824d0efd4c0a-0-aa7c3084c856f6a41dec0a050220d5ee" alt="Logo" class="logo-img">
+                <div class="brand-text">
+                    <h2>جهاز تنفيذ مشروعات الإسكان والمرافق</h2>
+                    <span>مكتب الزاوية - CiviX System</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Slides Area -->
+        <main id="main-content">
+            
+            <!-- Slide 0: Intro -->
+            <section class="slide active" id="slide-0">
+                <div class="slide-content" style="justify-content: center;">
+                    <div class="reveal-item" style="text-align: center;">
+                        <div style="font-size: 7rem; font-weight: 900; font-family: 'Montserrat', sans-serif; background: var(--luxury-gradient); -webkit-background-clip: text; color: transparent; line-height: 1;">CiviX</div>
+                        <div style="font-size: 1.3rem; color: var(--text-sub); font-weight: 600; letter-spacing: 5px; margin-top: 1rem;">ELECTRONIC ARCHIVING SYSTEM</div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 4rem;">
+                        <div class="intro-card reveal-item" style="background: white; padding: 2.5rem; border-radius: 20px; text-align: center; box-shadow: var(--shadow-lg); border-top: 4px solid var(--luxury-gold);">
+                            <i class="fa-regular fa-calendar-check" style="font-size: 2.5rem; color: var(--luxury-gold); margin-bottom: 1rem;"></i>
+                            <h3 style="color: var(--primary); margin-bottom: 0.5rem;">مدة التنفيذ</h3>
+                            <p style="color: var(--text-sub);">6 أشهر<br>فبراير - أغسطس 2026</p>
+                        </div>
+                        <div class="intro-card reveal-item" style="background: white; padding: 2.5rem; border-radius: 20px; text-align: center; box-shadow: var(--shadow-lg); border-top: 4px solid var(--accent);">
+                            <i class="fa-solid fa-users" style="font-size: 2.5rem; color: var(--accent); margin-bottom: 1rem;"></i>
+                            <h3 style="color: var(--primary); margin-bottom: 0.5rem;">حجم الفريق</h3>
+                            <p style="color: var(--text-sub);">5 مهندسين متخصصين<br>في تطوير الأنظمة</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 1: Overview -->
+            <section class="slide" id="slide-1">
+                <div class="slide-content">
+                    <h1 class="reveal-item">نظرة عامة شاملة (CiviX)</h1>
+                    <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 2rem;">
+                        <div class="features-grid">
+                            <div class="feature-box reveal-item">
+                                <i class="fa-solid fa-building-user"></i>
+                                <div class="feature-box-content"><strong>إدارة الشركات</strong><span>أرشفة بيانات المنفذين والعقود</span></div>
+                            </div>
+                            <div class="feature-box reveal-item">
+                                <i class="fa-solid fa-user-tie"></i>
+                                <div class="feature-box-content"><strong>المهندسين المشرفين</strong><span>قاعدة بيانات الكادر الهندسي</span></div>
+                            </div>
+                            <div class="feature-box reveal-item">
+                                <i class="fa-solid fa-folder-tree"></i>
+                                <div class="feature-box-content"><strong>إدارة المشاريع</strong><span>تتبع كامل دورة حياة المشروع</span></div>
+                            </div>
+                            <div class="feature-box reveal-item">
+                                <i class="fa-solid fa-file-invoice-dollar"></i>
+                                <div class="feature-box-content"><strong>القسم المالي</strong><span>المستخلصات والاعتمادات المالية</span></div>
+                            </div>
+                            <div class="feature-box reveal-item">
+                                <i class="fa-solid fa-file-signature"></i>
+                                <div class="feature-box-content"><strong>التفويضات</strong><span>سير عمل الاعتماد الرقمي</span></div>
+                            </div>
+                            <div class="feature-box reveal-item">
+                                <i class="fa-solid fa-shield-halved"></i>
+                                <div class="feature-box-content"><strong>نظام الصلاحيات</strong><span>تحكم دقيق في مستويات الوصول</span></div>
+                            </div>
+                        </div>
+
+                        <div class="feature-box reveal-item" style="background: var(--surface); padding: 2rem; flex-direction: column; justify-content: center; border-right: 6px solid var(--luxury-gold); height: 100%;">
+                            <i class="fa-solid fa-chart-line" style="font-size: 2.5rem; color: var(--luxury-gold); margin-bottom: 1.5rem;"></i>
+                            <h3 style="margin-bottom:1.5rem; color: var(--primary); font-size: 1.4rem; text-align: center;">حالة التقدم الشاملة</h3>
+                            
+                            <div style="width: 100%; display: flex; flex-direction: column; gap: 1rem;">
+                                <div class="status-item">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                        <span style="font-weight: 700;">القسم المالي</span>
+                                        <span style="color: #10b981; font-weight: 800;">100%</span>
+                                    </div>
+                                    <div style="height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden;"><div style="height: 100%; width: 100%; background: #10b981;"></div></div>
+                                </div>
+                                <div class="status-item">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                        <span style="font-weight: 700;">قسم المرافق</span>
+                                        <span style="color: #f59e0b; font-weight: 800;">45%</span>
+                                    </div>
+                                    <div style="height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden;"><div style="height: 100%; width: 45%; background: #f59e0b;"></div></div>
+                                </div>
+                                <div class="status-item">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                        <span style="font-weight: 700;">UI/UX Design</span>
+                                        <span style="color: #3b82f6; font-weight: 800;">90%</span>
+                                    </div>
+                                    <div style="height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden;"><div style="height: 100%; width: 90%; background: #3b82f6;"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 2: Methodology -->
+            <section class="slide" id="slide-2">
+                <div class="slide-content">
+                    <h1 class="reveal-item">المنهجية وأدوات العمل</h1>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                            <div class="feature-box reveal-item">
+                                <i class="fa-solid fa-compass-drafting"></i>
+                                <div class="feature-box-content">
+                                    <strong>Agile Methodology</strong>
+                                    <span>تقسيم العمل إلى سبرنتات (Sprints) قصيرة لضمان المرونة والجودة.</span>
+                                </div>
+                            </div>
+                            <div class="feature-box reveal-item">
+                                <i class="fa-brands fa-jira" style="color:#0052CC;"></i>
+                                <div class="feature-box-content">
+                                    <strong>Jira Management</strong>
+                                    <span>استخدام Jira الاحترافي لتتبع المهام بدقة وإدارة الأولويات.</span>
+                                </div>
+                            </div>
+                            <div class="feature-box reveal-item">
+                                <i class="fa-brands fa-git-alt" style="color:#f05032;"></i>
+                                <div class="feature-box-content">
+                                    <strong>Git Version Control</strong>
+                                    <span>إدارة الكود عبر GitHub مع نظام Pull Requests لضمان جودة المراجعة.</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tech-grid">
+                            <div class="tech-card reveal-item"><i class="fa-brands fa-python c-python"></i><span>Python</span></div>
+                            <div class="tech-card reveal-item"><i class="fa-solid fa-bolt c-fastapi"></i><span>FastAPI</span></div>
+                            <div class="tech-card reveal-item"><i class="fa-brands fa-js c-js"></i><span>JavaScript</span></div>
+                            <div class="tech-card reveal-item"><i class="fa-brands fa-docker c-docker"></i><span>Docker</span></div>
+                            <div class="tech-card reveal-item"><i class="fa-brands fa-git-alt c-git"></i><span>GitHub</span></div>
+                            <div class="tech-card reveal-item"><i class="fa-brands fa-jira c-jira"></i><span>Jira</span></div>
+                            <div class="tech-card reveal-item"><i class="fa-brands fa-ubuntu c-ubuntu"></i><span>Ubuntu</span></div>
+                            <div class="tech-card reveal-item"><i class="fa-brands fa-html5 c-html"></i><span>HTML5</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 3: Project Manager -->
+            <section class="slide" id="slide-3">
+                <div class="slide-content">
+                    <h1>Project Manager</h1>
+                    <div class="engineer-header reveal-item" style="background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);">
+                        <div class="eng-info">
+                            <h2>م. عبد الرحمن علي طروش</h2>
+                            <p>Project Manager & Team Lead</p>
+                        </div>
+                        <i class="fa-solid fa-chess-king" style="font-size: 2.5rem; color: rgba(255,255,255,0.3);"></i>
+                    </div>
+                    <div class="features-grid" style="margin-top: 2rem;">
+                        <div class="feature-box reveal-item">
+                            <i class="fa-solid fa-chess-king" style="color: #fbbf24;"></i>
+                            <div class="feature-box-content"><strong>التخطيط والاستراتيجية</strong><span>وضع خطة العمل والمسار الزمني</span></div>
+                        </div>
+                        <div class="feature-box reveal-item">
+                            <i class="fa-solid fa-users-gear" style="color: #fbbf24;"></i>
+                            <div class="feature-box-content"><strong>تنسيق الفريق</strong><span>توزيع المهام ومتابعة الأداء</span></div>
+                        </div>
+                        <div class="feature-box reveal-item">
+                            <i class="fa-solid fa-handshake" style="color: #fbbf24;"></i>
+                            <div class="feature-box-content"><strong>إدارة أصحاب المصلحة</strong><span>التواصل مع الإدارة والعملاء</span></div>
+                        </div>
+                        <div class="feature-box reveal-item">
+                            <i class="fa-solid fa-trophy" style="color: #fbbf24;"></i>
+                            <div class="feature-box-content"><strong>القيادة والإدارة</strong><span>ضمان سير المشروع وفق المعايير</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 4: Hajer -->
+            <section class="slide" id="slide-4">
+                <div class="slide-content">
+                    <h1>Backend Core & Security</h1>
+                    <div class="engineer-header reveal-item">
+                        <div class="eng-info">
+                            <h2>م. هاجر الفردغ</h2>
+                            <p>Backend Developer • Security & Logic</p>
+                        </div>
+                        <i class="fa-solid fa-shield-halved" style="font-size: 2.5rem; color: rgba(255,255,255,0.2);"></i>
+                    </div>
+                    <div class="features-grid" style="margin-top: 2rem;">
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-code"></i><strong>FastAPI Backend</strong><span>ضمان أعلى أداء للخادم</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-shield-halved"></i><strong>System Security</strong><span>تأمين نقاط النهاية والمنع</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-key"></i><strong>JWT Auth</strong><span>نظام مصادقة آمن باستخدام Tokens</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-lock"></i><strong>Password Encryption</strong><span>تشفير كلمات المرور Bcrypt</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-list-check"></i><strong>Logging</strong><span>سجلات تتبع النظام للأخطاء</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-database"></i><strong>SQLAlchemy</strong><span>إدارة قاعدة البيانات بكفاءة</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 5: Hana -->
+            <section class="slide" id="slide-5">
+                <div class="slide-content">
+                    <h1>Backend & DevOps</h1>
+                    <div class="engineer-header reveal-item" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%);">
+                        <div class="eng-info">
+                            <h2>م. هناء القمودي</h2>
+                            <p>Backend DevOps • Infrastructure</p>
+                        </div>
+                        <i class="fa-solid fa-server" style="font-size: 2.5rem; color: rgba(255,255,255,0.2);"></i>
+                    </div>
+                    <div class="features-grid" style="margin-top: 2rem;">
+                        <div class="feature-box reveal-item"><i class="fa-brands fa-docker"></i><strong>Docker</strong><span>توافق SQL Server مع Ubuntu</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-database"></i><strong>DB Design</strong><span>+12 جدول مترابط بفعالية</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-cloud-arrow-up"></i><strong>CI/CD</strong><span>آلية النشر المستمر</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-shield-halved"></i><strong>Rate Limiting</strong><span>منع الهجمات والتحميل الزائد</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-brands fa-ubuntu"></i><strong>Ubuntu 24.04</strong><span>بيئة الإنتاج المستقرة</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 6: Nahal (Updated with Figma) -->
+            <section class="slide" id="slide-6">
+                <div class="slide-content">
+                    <h1>UI/UX & Frontend Design</h1>
+                    <div class="engineer-header reveal-item" style="background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);">
+                        <div class="eng-info">
+                            <h2>م. نهال الرميح</h2>
+                            <!-- UPDATED: Added Figma as requested -->
+                            <p>UI/UX Designer • Figma Expert • Frontend Structure</p>
+                        </div>
+                        <i class="fa-brands fa-figma" style="font-size: 2.5rem; color: rgba(255,255,255,0.2);"></i>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; margin-top: 2rem;">
+                        <!-- Highlight Card -->
+                        <div class="feature-box reveal-item" style="text-align: center; justify-content: center; background: linear-gradient(135deg, #f5f3ff 0%, #e2e8f0 100%); box-shadow: none;">
+                            <i class="fa-brands fa-figma c-figma" style="font-size: 5rem; margin-bottom: 1rem; display:block;"></i>
+                            <h3 style="color:var(--primary); margin-bottom:0.5rem; font-weight: 800;">تصميم وتجربة المستخدم</h3>
+                            <p style="font-size:0.9rem; color:var(--text-sub); line-height: 1.6;">تحويل المتطلبات إلى واجهات تفاعلية سهلة وسلسة باستخدام أحدث أدوات التصميم.</p>
+                        </div>
+                        
+                        <!-- Skills Grid -->
+                        <div class="features-grid">
+                            <div class="feature-box reveal-item"><i class="fa-solid fa-laptop-code" style="color: #3b82f6;"></i><strong>Frontend Structure</strong><span>تحويل التصاميم إلى HTML/CSS</span></div>
+                            <div class="feature-box reveal-item"><i class="fa-solid fa-bezier-curve"></i><strong>User Flows</strong><span>تصميم رحلة المستخدم بذكاء</span></div>
+                            <div class="feature-box reveal-item"><i class="fa-solid fa-pen-ruler"></i><strong>Wireframing</strong><span>نماذج أولية عالية الدقة</span></div>
+                            <div class="feature-box reveal-item"><i class="fa-solid fa-palette"></i><strong>Visual Consistency</strong><span>التناسق البصري والتنسيق</span></div>
+                            <div class="feature-box reveal-item"><i class="fa-solid fa-mobile-screen" style="color: #ec4899;"></i><strong>Responsive</strong><span>ضمان العمل على كافة الشاشات</span></div>
+                            <div class="feature-box reveal-item"><i class="fa-solid fa-swatchbook" style="color: #8b5cf6;"></i><strong>Design Systems</strong><span>مكتبة موحدة للمكونات</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 7: Alfa -->
+            <section class="slide" id="slide-7">
+                <div class="slide-content">
+                    <h1>Frontend Logic & QA</h1>
+                    <div class="engineer-header reveal-item" style="background: linear-gradient(135deg, #db2777 0%, #9d174d 100%);">
+                        <div class="eng-info">
+                            <h2>م. ألفة الكادع</h2>
+                            <p>Frontend Developer • API Integration</p>
+                        </div>
+                        <i class="fa-solid fa-bolt" style="font-size: 2.5rem; color: rgba(255,255,255,0.2);"></i>
+                    </div>
+                    <div class="features-grid" style="margin-top: 2rem;">
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-network-wired" style="color: var(--accent);"></i><strong>REST APIs</strong><span>ربط الخدمات الخلفية بكفاءة</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-bolt" style="color: #f59e0b;"></i><strong>Async Logic</strong><span>معالجة البيانات غير المتزامنة</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-vial"></i><strong>Functional Testing</strong><span>اختبارات الوظائف بدقة</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-bug"></i><strong>Bug Reporting</strong><span>اكتشاف وإصلاح الأخطاء</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-check-double"></i><strong>Integration Testing</strong><span>ضمان استقرار النظام</span></div>
+                        <div class="feature-box reveal-item"><i class="fa-solid fa-code-branch"></i><strong>SPA Architecture</strong><span>تطبيق الصفحة الواحدة</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 8: Team & Vision (Before Conclusion) -->
+            <section class="slide" id="slide-8">
+                <div class="slide-content">
+                    <h1 class="reveal-item">رؤية المشروع وفريق العمل</h1>
+                    
+                    <!-- Vision Section -->
+                    <div class="vision-card reveal-item">
+                        <i class="fa-solid fa-eye"></i>
+                        <h3>رؤيتنا</h3>
+                        <p>
+                            "الريادة في التحول الرقمي لإدارة المشاريع الإنشائية، من خلال بناء أنظمة أرشفة ذكية توفر الوقت والجهد، وترتقي بمستوى الشفافية والدقة في اتخاذ القرار الإداري."
+                        </p>
+                    </div>
+
+                    <h2 class="reveal-item" style="text-align: center; font-size: 1.5rem; color: var(--primary); margin-top: 1rem; font-weight: 700;">فريق التطوير</h2>
+                    
+                    <!-- Team Grid -->
+                    <div class="profile-grid reveal-item" style="margin-top: 1.5rem;">
+                        <div class="profile-card">
+                            <div class="profile-icon"><i class="fa-solid fa-user-tie"></i></div>
+                            <h4>م. عبد الرحمن طروش</h4>
+                            <p>Project Manager</p>
+                        </div>
+                        <div class="profile-card">
+                            <div class="profile-icon"><i class="fa-solid fa-server"></i></div>
+                            <h4>م. هناء القمودي</h4>
+                            <p>Backend & DevOps</p>
+                        </div>
+                        <div class="profile-card">
+                            <div class="profile-icon"><i class="fa-solid fa-code"></i></div>
+                            <h4>م. هاجر الفردغ</h4>
+                            <p>Backend Dev</p>
+                        </div>
+                        <div class="profile-card">
+                            <div class="profile-icon"><i class="fa-brands fa-figma"></i></div>
+                            <h4>م. نهال الرميح</h4>
+                            <p>UI/UX & Figma</p>
+                        </div>
+                        <div class="profile-card">
+                            <div class="profile-icon"><i class="fa-solid fa-laptop-code"></i></div>
+                            <h4>م. ألفة الكادع</h4>
+                            <p>Frontend & QA</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 9: Thank You (Conclusion) -->
+            <section class="slide" id="slide-9">
+                <div class="thank-you-slide">
+                    <div class="ty-card reveal-item">
+                        <i class="fa-regular fa-circle-check" style="font-size: 4rem; color: var(--luxury-gold); margin-bottom: 1rem;"></i>
+                        <h1 class="ty-title">شكراً لحسن استماعكم</h1>
+                        <p class="ty-sub">
+                            نتشرف بتقديم نظام <span style="color: var(--primary); font-weight: 800;">CiviX</span> كخطوة نحو المستقبل الرقمي.
+                        </p>
+                        <div class="ty-quote">
+                            "إن النجاح ليس صدفة، بل هو العمل الجاد، التعلم، الدراسة، التضحية، وقبل كل شيء، loving what you are doing."
+                        </div>
+                        
+                        <div style="margin-top: 2.5rem; display: flex; gap: 1rem; justify-content: center;">
+                            <a href="http://102.203.201.36" target="_blank" style="text-decoration: none;">
+                                <button style="padding: 1rem 2rem; background: var(--primary); color: white; border: none; border-radius: 12px; font-family: 'Cairo', sans-serif; font-weight: 700; font-size: 1.1rem; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 10px;">
+                                    <i class="fa-solid fa-globe"></i> زيارة النظام 
+                                </button>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Footer Navigation -->
+        <footer>
+            <button class="nav-btn" id="prev-btn" onclick="changeSlide(-1)" disabled><i class="fa-solid fa-arrow-right"></i></button>
+            
+            <div style="font-weight: 700; color: var(--text-sub); font-size: 0.9rem;">
+                <span id="current-slide-num">1</span> / <span id="total-slides">10</span>
+            </div>
+
+            <button class="nav-btn" id="next-btn" onclick="changeSlide(1)"><i class="fa-solid fa-arrow-left"></i></button>
+            
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-fill"></div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- Three.js Background Animation (Abstract Network) ---
+        const initThreeJS = () => {
+            const container = document.getElementById('canvas-container');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+
+            // Particles
+            const geometry = new THREE.BufferGeometry();
+            const count = 150;
+            const positions = new Float32Array(count * 3);
+            
+            for(let i = 0; i < count * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 20; // Spread
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: 0.05,
+                color: 0xc5a059, // Gold
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            // Lines connecting particles
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x3b82f6, // Blue accent
+                transparent: true,
+                opacity: 0.15
+            });
+
+            const linesGeometry = new THREE.BufferGeometry();
+            const lines = new THREE.LineSegments(linesGeometry, lineMaterial);
+            scene.add(lines);
+
+            camera.position.z = 5;
+
+            // Animation Loop
+            let mouseX = 0;
+            let mouseY = 0;
+
+            document.addEventListener('mousemove', (event) => {
+                mouseX = event.clientX / window.innerWidth - 0.5;
+                mouseY = event.clientY / window.innerHeight - 0.5;
+            });
+
+            const animate = () => {
+                requestAnimationFrame(animate);
+
+                // Gentle rotation
+                particles.rotation.y += 0.001;
+                particles.rotation.x += 0.001;
+                lines.rotation.y += 0.001;
+                lines.rotation.x += 0.001;
+
+                // Mouse interaction
+                particles.rotation.y += mouseX * 0.01;
+                particles.rotation.x += mouseY * 0.01;
+
+                // Update lines dynamically
+                const particlePositions = particles.geometry.attributes.position.array;
+                const linePositions = [];
+                
+                // Simple logic to connect nearby particles
+                for (let i = 0; i < count; i++) {
+                    for (let j = i + 1; j < count; j++) {
+                        const dx = particlePositions[i * 3] - particlePositions[j * 3];
+                        const dy = particlePositions[i * 3 + 1] - particlePositions[j * 3 + 1];
+                        const dz = particlePositions[i * 3 + 2] - particlePositions[j * 3 + 2];
+                        const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+                        if (dist < 3) { // Connection threshold
+                            linePositions.push(
+                                particlePositions[i * 3], particlePositions[i * 3 + 1], particlePositions[i * 3 + 2],
+                                particlePositions[j * 3], particlePositions[j * 3 + 1], particlePositions[j * 3 + 2]
+                            );
+                        }
+                    }
+                }
+                
+                lines.geometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+
+                renderer.render(scene, camera);
+            };
+
+            animate();
+
+            // Resize handler
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
+
+        // --- Presentation Logic ---
+        let currentSlideIndex = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const slideNumDisplay = document.getElementById('current-slide-num');
+        const totalSlidesDisplay = document.getElementById('total-slides');
+        const progressFill = document.getElementById('progress-fill');
+
+        // Init display
+        totalSlidesDisplay.textContent = totalSlides;
+
+        function updateUI() {
+            // Update counters
+            slideNumDisplay.textContent = currentSlideIndex + 1;
+            
+            // Progress Bar
+            const progress = ((currentSlideIndex + 1) / totalSlides) * 100;
+            progressFill.style.width = `${progress}%`;
+
+            // Buttons state
+            prevBtn.disabled = currentSlideIndex === 0;
+            nextBtn.disabled = currentSlideIndex === totalSlides - 1;
+        }
+
+        function changeSlide(direction) {
+            const newIndex = currentSlideIndex + direction;
+
+            if (newIndex < 0 || newIndex >= totalSlides) return;
+
+            // Current slide exit animation
+            const currentSlide = slides[currentSlideIndex];
+            currentSlide.classList.add('prev'); // Trigger exit transform
+            currentSlide.classList.remove('active');
+
+            // Next slide enter animation
+            const nextSlide = slides[newIndex];
+            
+            // Small delay to allow CSS transitions to sync
+            setTimeout(() => {
+                nextSlide.classList.add('active');
+                // Reset previous slide after transition
+                setTimeout(() => {
+                    currentSlide.classList.remove('prev');
+                }, 600);
+            }, 100);
+
+            // Trigger Confetti on the last slide
+            if(newIndex === totalSlides - 1) {
+                fireConfetti();
+            }
+
+            currentSlideIndex = newIndex;
+            updateUI();
+        }
+
+        function fireConfetti() {
+            const duration = 3 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 999 };
+
+            const random = (min, max) => Math.random() * (max - min) + min;
+
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                const particleCount = 50 * (timeLeft / duration);
+                
+                // Gold and Blue Confetti
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: random(0.1, 0.3), y: Math.random() - 0.2 }, colors: ['#c5a059', '#3b82f6'] }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: random(0.7, 0.9), y: Math.random() - 0.2 }, colors: ['#c5a059', '#0f172a'] }));
+            }, 250);
+        }
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                changeSlide(1); // Next in RTL
+            } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                changeSlide(-1); // Prev in RTL
+            }
+        });
+
+        // Initialize
+        window.addEventListener('load', () => {
+            initThreeJS();
+            updateUI();
+        });
+
+    </script>
+</body>
+</html>
